@@ -210,14 +210,15 @@ impl<'run, 'src> Analyzer<'run, 'src> {
 
     let variable_resolver = VariableResolver::new(&assignments, bindings, &functions, overrides);
 
-    let mut variable_references = HashSet::new();
+    let mut strict_references = HashSet::new();
+    let mut default_references = HashSet::new();
 
     for set in self.sets.values_mut() {
       for expression in set.value.expressions_mut() {
         variable_resolver.resolve_expression(
           expression,
           &ExpressionContext::new(),
-          &mut variable_references,
+          &mut strict_references,
         )?;
       }
     }
@@ -230,11 +231,11 @@ impl<'run, 'src> Analyzer<'run, 'src> {
         .values()
         .any(|set| matches!(set.value, Setting::Lists(true)));
 
-      let mut collect_references = |expression| {
+      let collect_references = |references: &mut HashSet<Number>, expression| {
         variable_resolver.collect_references(
           expression,
           &ExpressionContext::new(),
-          &mut variable_references,
+          references,
           &mut HashSet::new(),
         );
       };
@@ -247,29 +248,44 @@ impl<'run, 'src> Analyzer<'run, 'src> {
             ..
           } => {
             if let Some((_, expression)) = help_property {
-              collect_references(expression);
+              collect_references(&mut strict_references, expression);
             }
             if let Some((_, expression)) = pattern_property {
-              collect_references(expression);
+              collect_references(&mut strict_references, expression);
             }
           }
           Attribute::Doc(Some(expression)) => {
-            collect_references(expression);
+            collect_references(&mut strict_references, expression);
           }
           _ => {}
         }
       }
 
       for (_name, expression) in &module_docs {
-        collect_references(expression);
+        collect_references(&mut strict_references, expression);
       }
+
+      for expression in self
+        .recipes
+        .iter()
+        .flat_map(|recipe| &recipe.parameters)
+        .filter_map(|parameter| parameter.default.as_ref())
+      {
+        collect_references(&mut default_references, expression);
+      }
+
+      let all_references = strict_references
+        .union(&default_references)
+        .copied()
+        .collect();
 
       Evaluator::evaluate_const_assignments(
         &assignments,
         &evaluation_order,
         overrides,
         &scope,
-        &variable_references,
+        &strict_references,
+        &all_references,
         lists,
       )?
     };
@@ -290,7 +306,7 @@ impl<'run, 'src> Analyzer<'run, 'src> {
       variable_resolver.resolve_expression(
         &mut expression,
         &ExpressionContext::new(),
-        &mut variable_references,
+        &mut strict_references,
       )?;
       let value = evaluator.evaluate_value_const(&expression)?;
       self.modules.get_mut(name).unwrap().doc = if value.is_empty() {

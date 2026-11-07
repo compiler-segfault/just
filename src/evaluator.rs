@@ -21,12 +21,20 @@ impl<'src, 'run> Evaluator<'src, 'run> {
     self.context.as_ref().ok_or(const_error)
   }
 
+  /// Evaluate assignments that are referenced by attributes, parameter
+  /// defaults, or settings.
+  ///
+  /// Assignments in `strict_references` are referenced by attributes or
+  /// settings, where evaluation errors are fatal. Assignments referenced only
+  /// by parameter defaults are marked as non-constant instead, since defaults
+  /// fall back to their source text.
   pub(crate) fn evaluate_const_assignments(
     assignments: &'run Table<'src, Assignment<'src>>,
     evaluation_order: &[Name<'src>],
     overrides: &'run HashMap<Number, String>,
     scope: &'run Scope<'src, 'run>,
-    variable_references: &HashSet<Number>,
+    strict_references: &HashSet<Number>,
+    all_references: &HashSet<Number>,
     lists: bool,
   ) -> CompileResult<'src, Self> {
     let mut evaluator = Self {
@@ -44,7 +52,7 @@ impl<'src, 'run> Evaluator<'src, 'run> {
 
     for assignment in evaluation_order {
       let assignment = &assignments[assignment.lexeme()];
-      if variable_references.contains(&assignment.number) {
+      if all_references.contains(&assignment.number) {
         match evaluator
           .evaluate_assignment(assignment)
           .map_err(Error::unwrap_const)
@@ -52,7 +60,12 @@ impl<'src, 'run> Evaluator<'src, 'run> {
           Err(ConstEvalError::Const(_)) => {
             evaluator.non_const_assignments.insert(assignment.number);
           }
-          Err(error) => return Err(error.into_compile_error()),
+          Err(error) => {
+            if strict_references.contains(&assignment.number) {
+              return Err(error.into_compile_error());
+            }
+            evaluator.non_const_assignments.insert(assignment.number);
+          }
           Ok(_) => {}
         }
       }
@@ -470,6 +483,13 @@ impl<'src, 'run> Evaluator<'src, 'run> {
     self
       .evaluate_value(expression)
       .map_err(|error| error.unwrap_const().into_compile_error())
+  }
+
+  /// Evaluate `expression` as a constant, returning `None` if it cannot be
+  /// evaluated without a runtime context.
+  pub(crate) fn try_evaluate_value_const(&self, expression: &Expression<'src>) -> Option<Value> {
+    assert!(self.context.is_none());
+    self.evaluate_value(expression).ok()
   }
 
   pub(crate) fn evaluate_string_const(

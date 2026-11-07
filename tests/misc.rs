@@ -65,7 +65,7 @@ fn alias_listing_parameters() {
     .stdout(
       "
         Available recipes:
-            foo PARAM='foo' # [alias: f]
+            foo PARAM=\"foo\" # [alias: f]
       ",
     )
     .success();
@@ -79,7 +79,7 @@ fn alias_listing_private() {
     .stdout(
       "
         Available recipes:
-            foo PARAM='foo'
+            foo PARAM=\"foo\"
       ",
     )
     .success();
@@ -1011,7 +1011,7 @@ fn list() {
       r#"
         Available recipes:
             a Z="\t z"
-            hello a b='B	' c='C' # this does a thing
+            hello a b="B\t" c="C" # this does a thing
       "#,
     )
     .success();
@@ -1038,8 +1038,8 @@ fn list_alignment() {
     .stdout(
       r#"
         Available recipes:
-            a Z="\t z"           # something else
-            hello a b='B	' c='C' # this does a thing
+            a Z="\t z"            # something else
+            hello a b="B\t" c="C" # this does a thing
       "#,
     )
     .success();
@@ -1070,10 +1070,10 @@ fn list_alignment_long() {
     .stdout(
       r#"
         Available recipes:
-            hello a b='B	' c='C' # this does a thing
+            hello a b="B\t" c="C" # this does a thing
             # something else
             this-recipe-is-very-very-very-very-very-very-very-very-important Z="\t z"
-            x a b='B	' c='C'     # this does another thing
+            x a b="B\t" c="C"     # this does another thing
       "#,
     )
     .success();
@@ -1926,7 +1926,7 @@ fn list_colors() {
         Available recipes:
             a \
         \u{1b}[36mB\u{1b}[0m \u{1b}[36mC\u{1b}[0m \u{1b}[35m+\
-        \u{1b}[0m\u{1b}[36mD\u{1b}[0m=\u{1b}[32m'hello'\u{1b}[0m \
+        \u{1b}[0m\u{1b}[36mD\u{1b}[0m=\u{1b}[32m\"hello\"\u{1b}[0m \
          \u{1b}[34m#\u{1b}[0m \u{1b}[34mcomment\u{1b}[0m
       ",
     )

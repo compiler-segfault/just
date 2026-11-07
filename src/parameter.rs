@@ -3,6 +3,8 @@ use super::*;
 #[derive(PartialEq, Debug, Clone, Serialize)]
 pub(crate) struct Parameter<'src> {
   pub(crate) default: Option<Expression<'src>>,
+  #[serde(skip)]
+  pub(crate) default_value: Option<Value>,
   pub(crate) export: bool,
   pub(crate) flag: bool,
   pub(crate) help: Option<String>,
@@ -82,10 +84,8 @@ impl<'src> Parameter<'src> {
       recipe: recipe.name(),
     })
   }
-}
 
-impl ColorDisplay for Parameter<'_> {
-  fn fmt(&self, f: &mut Formatter, color: Color) -> fmt::Result {
+  fn write(&self, f: &mut Formatter, color: Color, evaluate_default: bool) -> fmt::Result {
     if let Some(prefix) = self.kind.prefix() {
       write!(f, "{}", color.annotation().paint(prefix))?;
     }
@@ -94,8 +94,26 @@ impl ColorDisplay for Parameter<'_> {
     }
     write!(f, "{}", color.parameter().paint(self.name.lexeme()))?;
     if let Some(default) = &self.default {
-      write!(f, "={}", color.string().paint(&default.to_string()))?;
+      if evaluate_default && let Some(default_value) = &self.default_value {
+        write!(f, "={}", default_value.color_display(color))?;
+      } else {
+        write!(f, "={}", color.string().paint(&default.to_string()))?;
+      }
     }
     Ok(())
+  }
+}
+
+pub(crate) struct EvaluatedParameter<'a, 'src>(pub(crate) &'a Parameter<'src>);
+
+impl ColorDisplay for Parameter<'_> {
+  fn fmt(&self, f: &mut Formatter, color: Color) -> fmt::Result {
+    self.write(f, color, false)
+  }
+}
+
+impl ColorDisplay for EvaluatedParameter<'_, '_> {
+  fn fmt(&self, f: &mut Formatter, color: Color) -> fmt::Result {
+    self.0.write(f, color, true)
   }
 }

@@ -88,7 +88,7 @@ pub(crate) use {
     numerator::Numerator,
     ordinal::Ordinal,
     output_error::OutputError,
-    parameter::Parameter,
+    parameter::{EvaluatedParameter, Parameter},
     parameter_kind::ParameterKind,
     parser::Parser,
     path_buf_ext::PathBufExt,

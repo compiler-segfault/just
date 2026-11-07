@@ -1509,6 +1509,7 @@ impl<'run, 'src> Parser<'run, 'src> {
 
     Ok(Parameter {
       default,
+      default_value: None,
       export,
       flag,
       help,

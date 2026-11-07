@@ -43,14 +43,14 @@ foo a b c='abc' d e f='xyz' g='bar' *h:
 
         Arguments:
           b hello [pattern: '123|789']
-          [c] [default: 'abc']
+          [c] [default: \"abc\"]
           [h...]
 
         Options:
           -a a
           -d, --delightful d
           -e e [pattern: 'abc|xyz']
-              --f f [default: 'xyz'] [pattern: 'lucky' | 'dog']
+              --f f [default: \"xyz\"] [pattern: 'lucky' | 'dog']
           -g
       ",
     )
@@ -230,6 +230,101 @@ fn multi_line_doc() {
             # foo
             # bar
             just baz
+      ",
+    )
+    .success();
+}
+
+#[test]
+fn constant_default_is_evaluated() {
+  Test::new()
+    .justfile(
+      "
+        you := 'world'
+
+        [arg('name', help='Defaults to ' + you)]
+        hello name=you:
+          echo 'Hello, {{ name }}!'
+      ",
+    )
+    .args(["--usage", "hello"])
+    .stdout(
+      "
+        Usage: just hello [name]
+
+        Arguments:
+          [name] Defaults to world [default: \"world\"]
+      ",
+    )
+    .success();
+}
+
+#[test]
+fn constant_expression_default_is_evaluated() {
+  Test::new()
+    .justfile(
+      "
+        a := 'a'
+        b := a + 'b'
+        c := 'dir' / 'file'
+
+        foo x=b y=c:
+      ",
+    )
+    .args(["--usage", "foo"])
+    .stdout(
+      "
+        Usage: just foo [x] [y]
+
+        Arguments:
+          [x] [default: \"ab\"]
+          [y] [default: \"dir/file\"]
+      ",
+    )
+    .success();
+}
+
+#[test]
+fn non_constant_default_is_not_evaluated() {
+  Test::new()
+    .justfile(
+      "
+        hello a=`echo A` b=env_var('B') c=a:
+      ",
+    )
+    .args(["--usage", "hello"])
+    .stdout(
+      "
+        Usage: just hello [a] [b] [c]
+
+        Arguments:
+          [a] [default: `echo A`]
+          [b] [default: env_var('B')]
+          [c] [default: a]
+      ",
+    )
+    .success();
+}
+
+#[test]
+fn submodule_constant_default_is_evaluated() {
+  Test::new()
+    .justfile("mod foo")
+    .write(
+      "foo.just",
+      "
+        you := 'world'
+
+        bar baz=you:
+      ",
+    )
+    .args(["--usage", "foo", "bar"])
+    .stdout(
+      "
+        Usage: just foo bar [baz]
+
+        Arguments:
+          [baz] [default: \"world\"]
       ",
     )
     .success();

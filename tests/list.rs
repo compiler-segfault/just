@@ -319,6 +319,49 @@ fn list_displays_recipes_in_submodules() {
 }
 
 #[test]
+fn constant_default_is_evaluated() {
+  Test::new()
+    .justfile(
+      "
+        you := 'world'
+
+        hello name=you:
+      ",
+    )
+    .args(["--list"])
+    .stdout(
+      "
+        Available recipes:
+            hello name=\"world\"
+      ",
+    )
+    .success();
+}
+
+#[test]
+fn constant_default_is_evaluated_in_submodule() {
+  Test::new()
+    .justfile("mod foo")
+    .write(
+      "foo.just",
+      "
+        you := 'world'
+
+        bar baz=you:
+      ",
+    )
+    .args(["--list", "--list-submodules"])
+    .stdout(
+      "
+        Available recipes:
+            foo:
+                bar baz=\"world\"
+      ",
+    )
+    .success();
+}
+
+#[test]
 fn modules_are_space_separated_in_output() {
   Test::new()
     .write("foo.just", "foo:")
@@ -579,7 +622,7 @@ fn positional_and_option_parameters_in_signature() {
     .stdout(
       "
         Available recipes:
-            recipe [OPTIONS] qux baz='z'
+            recipe [OPTIONS] qux baz=\"z\"
       ",
     )
     .success();

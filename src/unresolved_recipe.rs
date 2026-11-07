@@ -33,6 +33,12 @@ impl<'src> UnresolvedRecipe<'src> {
       }
     }
 
+    for parameter in &mut self.parameters {
+      if let Some(default) = &parameter.default {
+        parameter.default_value = evaluator.try_evaluate_value_const(default);
+      }
+    }
+
     let parameters = self.parameters.as_slice().into();
     let empty = ExpressionContext::new();
 

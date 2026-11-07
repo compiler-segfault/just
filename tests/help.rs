@@ -119,7 +119,7 @@ fn first_help_wins() {
         Usage: just foo [OPTIONS]
 
         Options:
-              --bar bar [default: 'baz']
+              --bar bar [default: \"baz\"]
       ",
     )
     .success();

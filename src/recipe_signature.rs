@@ -15,7 +15,7 @@ impl ColorDisplay for RecipeSignature<'_> {
       if parameter.is_option() {
         continue;
       }
-      write!(f, " {}", parameter.color_display(color))?;
+      write!(f, " {}", EvaluatedParameter(parameter).color_display(color))?;
     }
     Ok(())
   }
